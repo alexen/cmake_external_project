@@ -1,0 +1,213 @@
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/canon/XSECCanon.hpp xmlsec/xsec/canon/XSECCanon.hpp
+--- xmlsec-orig/xsec/canon/XSECCanon.hpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/canon/XSECCanon.hpp	2015-12-08 12:28:10.000000000 +0000
+@@ -28,6 +28,8 @@
+  * $Id: XSECCanon.hpp 1125514 2011-05-20 19:08:33Z scantor $
+  */
+ 
++#pragma once
++
+ // XSEC includes
+ #include <xsec/framework/XSECDefs.hpp>
+ #include <xsec/utils/XSECSafeBuffer.hpp>
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/dsig/DSIGConstants.cpp xmlsec/xsec/dsig/DSIGConstants.cpp
+--- xmlsec-orig/xsec/dsig/DSIGConstants.cpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/dsig/DSIGConstants.cpp	2015-12-08 12:28:10.000000000 +0000
+@@ -184,6 +184,7 @@
+ const XMLCh * DSIGConstants::s_unicodeStrURIC14N11_COM;
+ const XMLCh * DSIGConstants::s_unicodeStrURIEXC_C14N_NOC;
+ const XMLCh * DSIGConstants::s_unicodeStrURIEXC_C14N_COM;
++const XMLCh * DSIGConstants::s_unicodeStrURI_SMEV;
+ 
+ const XMLCh * DSIGConstants::s_unicodeStrURIDSA_SHA1;
+ const XMLCh * DSIGConstants::s_unicodeStrURIDSA_SHA256;
+@@ -285,6 +286,8 @@
+     s_unicodeStrURIC14N11_COM = XMLString::transcode(URI_ID_C14N11_COM);
+    s_unicodeStrURIEXC_C14N_NOC = XMLString::transcode(URI_ID_EXC_C14N_NOC);
+    s_unicodeStrURIEXC_C14N_COM = XMLString::transcode(URI_ID_EXC_C14N_COM);
++	s_unicodeStrURI_SMEV = XMLString::transcode(URI_ID_SMEV);
++
+ 
+    s_unicodeStrURIDSA_SHA1 = XMLString::transcode(URI_ID_DSA_SHA1);
+     s_unicodeStrURIDSA_SHA256 = XMLString::transcode(URI_ID_DSA_SHA256);
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/dsig/DSIGConstants.hpp xmlsec/xsec/dsig/DSIGConstants.hpp
+--- xmlsec-orig/xsec/dsig/DSIGConstants.hpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/dsig/DSIGConstants.hpp	2015-12-08 12:28:10.000000000 +0000
+@@ -105,6 +105,9 @@
+				 here()/ancestor::dsig:Signature[1]) > \
+				 count(ancestor-or-self::dsig:Signature)"
+ 
++// smev3 transformation
++#define URI_ID_SMEV			"urn://smev-gov-ru/xmldsig/transform"
++
+ // Signature Algorithms
+ 
+ #define URI_ID_SIG_BASE		"http://www.w3.org/2000/09/xmldsig#"
+@@ -602,6 +605,7 @@
+     static const XMLCh * s_unicodeStrURIC14N11_COM;
+    static const XMLCh * s_unicodeStrURIEXC_C14N_NOC;
+    static const XMLCh * s_unicodeStrURIEXC_C14N_COM;
++	static const XMLCh * s_unicodeStrURI_SMEV;
+ 
+    static const XMLCh * s_unicodeStrURIDSA_SHA1;
+     static const XMLCh * s_unicodeStrURIDSA_SHA256;
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/dsig/DSIGReference.cpp xmlsec/xsec/dsig/DSIGReference.cpp
+--- xmlsec-orig/xsec/dsig/DSIGReference.cpp	2013-06-26 01:01:27.000000000 +0000
++++ xmlsec/xsec/dsig/DSIGReference.cpp	2015-12-08 12:28:10.000000000 +0000
+@@ -209,6 +209,14 @@
+    mp_transformList->addTransform(txfm);
+ }
+ 
++void DSIGReference::addTransform(DSIGTransform * txfm)
++{
++	if (mp_transformList == NULL)
++		createTransformList();
++
++	mp_transformList->addTransform(txfm);
++}
++
+ 
+ DSIGTransformEnvelope * DSIGReference::appendEnvelopedSignatureTransform() {
+ 
+@@ -1155,6 +1163,10 @@
+	    c->load();
+ 
+	}
++		else if (algorithm.sbStrcmp(URI_ID_SMEV) == 0)
++		{
++		    // transformation will be added in another place
++		}
+ 
+	else {
+ 
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/dsig/DSIGReference.hpp xmlsec/xsec/dsig/DSIGReference.hpp
+--- xmlsec-orig/xsec/dsig/DSIGReference.hpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/dsig/DSIGReference.hpp	2015-12-08 12:28:10.000000000 +0000
+@@ -539,17 +539,22 @@
+     */
+    static void hashReferenceList(DSIGReferenceList * list, bool interlocking = true);
+ 
++	void addTransform(
++	          DSIGTransform * txfm,
++	          XERCES_CPP_NAMESPACE_QUALIFIER DOMElement * txfmElt
++	     );
++
++	void addTransform(
++	          DSIGTransform * txfm
++	     );
++
+    //@}
+ 
+ private:
+ 
+    // Internal functions
+    void createTransformList(void);
+-	void addTransform(
+-		DSIGTransform * txfm, 
+-		XERCES_CPP_NAMESPACE_QUALIFIER DOMElement * txfmElt
+-	);
+-
++	
+ 
+    XSECSafeBufferFormatter		* mp_formatter;
+    bool formatterLocal;
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/dsig/DSIGSignature.hpp xmlsec/xsec/dsig/DSIGSignature.hpp
+--- xmlsec-orig/xsec/dsig/DSIGSignature.hpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/dsig/DSIGSignature.hpp	2015-12-08 12:28:10.000000000 +0000
+@@ -973,6 +973,12 @@
+ 
+    bool deregisterIdAttributeNameNS(const XMLCh * ns, const XMLCh * name);
+ 
++	const XERCES_CPP_NAMESPACE_QUALIFIER DOMNode* getSigNode() const
++	{
++	    return mp_sigNode;
++	}
++
++
+    //@}
+ 
+    friend class XSECProvider;
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/transformers/TXFMC14n.cpp xmlsec/xsec/transformers/TXFMC14n.cpp
+--- xmlsec-orig/xsec/transformers/TXFMC14n.cpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/transformers/TXFMC14n.cpp	2015-12-08 14:58:42.570467349 +0000
+@@ -27,15 +27,24 @@
+  * $Id: TXFMC14n.cpp 1125514 2011-05-20 19:08:33Z scantor $
+  *
+  */
+-
++#include <string>
+ #include <xsec/transformers/TXFMC14n.hpp>
+ #include <xsec/framework/XSECException.hpp>
+ #include <xsec/transformers/TXFMParser.hpp>
+ #include <xsec/framework/XSECError.hpp>
+ 
++namespace
++{
++const char bomUtf8[] = "\xEF\xBB\xBF";
++size_t bomSize = sizeof(bomUtf8) - 1;
++}
++
++
+ XERCES_CPP_NAMESPACE_USE
+ 
+-TXFMC14n::TXFMC14n(DOMDocument *doc) : TXFMBase(doc) {
++TXFMC14n::TXFMC14n(DOMDocument *doc) : TXFMBase(doc)
++, needBom(true)
++{
+ 
+    mp_c14n = NULL;
+ 
+@@ -171,11 +180,27 @@
+ unsigned int TXFMC14n::readBytes(XMLByte * const toFill, unsigned int maxToFill) {
+ 
+    if (mp_c14n == NULL)
+-
+	return 0;
+ 
+-	return (unsigned int) mp_c14n->outputBuffer(toFill, maxToFill);
+-
++	unsigned int maxBytes = (needBom) ? maxToFill + bomSize : maxToFill ;
++	
++	std::string utf8Buf(maxBytes, 0);
++
++	unsigned int nRead = static_cast<unsigned int>(mp_c14n->outputBuffer(reinterpret_cast<unsigned char*>(const_cast<char*>(utf8Buf.data())), maxBytes));
++
++	// adding bom for utf-8
++	if (needBom)
++	{
++	     memcpy(toFill, bomUtf8, bomSize);
++	     needBom = false;
++	     memcpy(toFill + bomSize, utf8Buf.data(), nRead);
++	     return nRead + bomSize;
++	}
++        else
++        {
++	     memcpy(toFill, utf8Buf.data(), nRead);
++	     return nRead;
++        }
+ }
+ 
+ DOMDocument * TXFMC14n::getDocument() {
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/transformers/TXFMC14n.hpp xmlsec/xsec/transformers/TXFMC14n.hpp
+--- xmlsec-orig/xsec/transformers/TXFMC14n.hpp	2012-07-23 16:56:11.000000000 +0000
++++ xmlsec/xsec/transformers/TXFMC14n.hpp	2015-12-08 12:28:10.000000000 +0000
+@@ -41,6 +41,7 @@
+ private:
+ 
+    XSECC14n20010315		* mp_c14n;			// The actual canonicaliser
++	bool needBom;
+ 
+ public:
+ 
+diff --unified '--exclude=*.lo' '--exclude=*.o' --recursive xmlsec-orig/xsec/tools/checksig/InteropResolver.cpp xmlsec/xsec/tools/checksig/InteropResolver.cpp
+--- xmlsec-orig/xsec/tools/checksig/InteropResolver.cpp 2019-11-08 08:09:09.674017000 +0300
++++ xmlsec/xsec/tools/checksig/InteropResolver.cpp 2019-11-08 08:10:19.907217000 +0300
+@@ -645,7 +645,7 @@
+ 
+ 	}
+ 
+-	return false;
++	return NULL;
+ 
+ }
+ 
