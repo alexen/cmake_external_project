@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(using_external_project)
 
+option(BUILD_SHARED_LIBS "Build shared libs by default" ON)
+
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 
 set(CONTRIB_BINARY_DIR ${CMAKE_BINARY_DIR}/_build)
@@ -18,6 +20,7 @@ install(
 
 find_package(Threads REQUIRED)
 
+include_directories(src)
 add_subdirectory(src)
 
 add_dependencies(${PROJECT_NAME} contribs)

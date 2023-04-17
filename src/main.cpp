@@ -9,21 +9,26 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 
+#include <libs/funcs.h>
+
+
 int main( int argc, char** argv )
 {
      boost::ignore_unused( argc, argv );
      try
      {
+          boost::mutex m;
           boost::thread_group tg;
           for( auto i=0; i<4; ++i )
           {
-               tg.create_thread( []{
-                    std::cout << "Hello! I am thread " << boost::this_thread::get_id() << std::endl;
-                    if( boost::filesystem::exists( "/home/alexen/.bashrc" ) )
-                    {
-                         std::cout << "Thread " << boost::this_thread::get_id()
-                              << " says file exists!" << std::endl;
-                    }
+               tg.create_thread( [ &m ]{
+                    alexen::libs::funcs::funcA( m );
+               } );
+               tg.create_thread( [ &m ]{
+                    alexen::libs::funcs::funcB( m );
+               } );
+               tg.create_thread( [ &m ]{
+                    alexen::libs::funcs::funcC( m );
                } );
           }
           tg.join_all();
